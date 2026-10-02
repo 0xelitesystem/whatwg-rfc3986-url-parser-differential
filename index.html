@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>WHATWG vs RFC 3986 URL Parser Differential</title>
+<meta name="description" content="Paste URLs and see, field by field, where your browser's WHATWG URL parser and a strict RFC 3986 grammar disagree on host, userinfo, port and path, including strings one accepts and the other rejects.">
+<link rel="canonical" href="https://0xelitesystem.github.io/whatwg-rfc3986-url-parser-differential/">
+<meta property="og:title" content="WHATWG vs RFC 3986 URL Parser Differential">
+<meta property="og:description" content="Paste URLs and see, field by field, where your browser's WHATWG URL parser and a strict RFC 3986 grammar disagree on host, userinfo, port and path, including strings one accepts and the other rejects.">
+<meta property="og:url" content="https://0xelitesystem.github.io/whatwg-rfc3986-url-parser-differential/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"WHATWG vs RFC 3986 URL Parser Differential","applicationCategory":"DeveloperApplication","operatingSystem":"Any (browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://0xelitesystem.github.io/whatwg-rfc3986-url-parser-differential/","author":{"@type":"Person","name":"0xelitesystem","url":"https://elitesystem.ai"}}
+</script>
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem('wrud-theme');
+    if (t !== 'dark' && t !== 'light') {
+      t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+<style>
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --bg-deep: #050505;
+  --surface: #111110;
+  --surface-2: #161614;
+  --ink: #e8e8e3;
+  --ink-soft: #a8a8a3;
+  --muted: #6e6e68;
+  --rule: #1f1f1d;
+  --rule-2: #2a2a27;
+  --accent: #d4ff3a;
+  --accent-2: #ffb454;
+  --on-accent: #0a0a0a;
+  --code-bg: #111110;
+  --ok: #7ddc7d;
+  --warn: #ffb454;
+  --err: #ff6450;
+  --info: #6fd3e0;
+  --mark: #ffb454;
+  --field: #7a7a74;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #e8ebef;
+  --bg-deep: #f4f5f8;
+  --surface: #dee2e8;
+  --surface-2: #d3d7df;
+  --ink: #0a0a0a;
+  --ink-soft: #2a2a27;
+  --muted: #6e6e68;
+  --rule: #c8cdd5;
+  --rule-2: #aab0ba;
+  --accent: #2d6b00;
+  --accent-2: #8a4d00;
+  --on-accent: #ffffff;
+  --code-bg: #dee2e8;
+  --ok: #1a5c2e;
+  --warn: #8a4d00;
+  --err: #a82d14;
+  --info: #0f5c60;
+  --mark: #8a4d00;
+  --field: #6a707a;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-wrap: break-word;
+}
+code, pre, textarea, input[type=text], .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 64px; }
+a { color: var(--accent); }
+a:hover { color: var(--accent-2); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+.tagline { color: var(--ink-soft); margin: 0; max-width: 70ch; }
+h2 { font-size: 18px; margin: 36px 0 10px; }
+h3 { font-size: 13px; margin: 0 0 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.07em; }
+p { margin: 0 0 12px; }
+.small { font-size: 13px; color: var(--ink-soft); }
+.panel { background: var(--surface); border: 1px solid var(--rule-2); border-radius: 8px; padding: 16px; }
+label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+textarea, input[type=text] {
+  width: 100%; background: var(--bg-deep); color: var(--ink);
+  border: 1px solid var(--field); border-radius: 6px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
+}
+textarea { min-height: 190px; resize: vertical; white-space: pre; tab-size: 4; }
+.fieldrow { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; }
+.checks label { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); }
+.checks input { width: 18px; height: 18px; accent-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+button {
+  background: var(--surface-2); color: var(--ink); border: 1px solid var(--field);
+  border-radius: 6px; padding: 8px 13px; cursor: pointer; font-size: 13px; min-height: 36px;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); }
+.themebtn { white-space: nowrap; }
+.banner { border-radius: 6px; padding: 11px 14px; margin: 14px 0 0; font-size: 14px; border: 1px solid; background: var(--surface); }
+.banner.err { border-color: var(--err); color: var(--err); font-weight: 600; }
+.banner.ok { border-color: var(--ok); color: var(--ok); }
+.banner.info { border-color: var(--rule-2); color: var(--ink); }
+.badge { display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid; letter-spacing: 0.03em; font-weight: 600; white-space: nowrap; background: var(--surface); }
+.b-agree { color: var(--ok); border-color: var(--ok); }
+.b-norm { color: var(--info); border-color: var(--info); }
+.b-ip { color: var(--info); border-color: var(--info); }
+.b-dis { color: var(--err); border-color: var(--err); }
+.b-rej { color: var(--warn); border-color: var(--warn); }
+.b-both { color: var(--ink-soft); border-color: var(--rule-2); }
+.b-flag { color: var(--err); border-color: var(--err); }
+.b-note { color: var(--ink-soft); border-color: var(--rule-2); }
+.card { border: 1px solid var(--rule-2); border-radius: 8px; background: var(--surface); margin-top: 16px; overflow: hidden; }
+.card > .head { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--rule); background: var(--surface-2); }
+.lineno { font-size: 12px; color: var(--ink-soft); }
+.input-view { font-size: 14px; font-weight: 600; word-break: break-all; flex: 1 1 260px; }
+.mk { color: var(--mark); border: 1px solid var(--mark); border-radius: 3px; padding: 0 2px; margin: 0 1px; font-size: 11px; font-weight: 600; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.col { padding: 12px 14px; border-right: 1px solid var(--rule); min-width: 0; }
+.col:last-child { border-right: 0; }
+.col h3 { margin-bottom: 4px; }
+.col .sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
+dl.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; margin: 6px 0 0; font-size: 13px; }
+dl.kv dt { color: var(--ink-soft); }
+dl.kv dd { margin: 0; word-break: break-all; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.verdict { font-weight: 700; }
+.v-ok { color: var(--ok); }
+.v-bad { color: var(--err); }
+.cite { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+.steps { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
+.steps li { padding: 3px 0; border-top: 1px dashed var(--rule-2); word-break: break-all; }
+.steps .lbl { color: var(--ink-soft); display: block; word-break: normal; }
+.cmpwrap { overflow-x: auto; border-top: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { background: var(--surface-2); color: var(--ink-soft); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+td.val { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; min-width: 120px; }
+tbody tr:last-child td { border-bottom: 0; }
+.notes { padding: 10px 14px; border-top: 1px solid var(--rule); font-size: 13px; background: var(--bg-deep); }
+.notes p { margin: 0 0 6px; }
+.notes p:last-child { margin: 0; }
+blockquote { margin: 6px 0; padding: 6px 12px; border-left: 3px solid var(--rule-2); color: var(--ink); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--surface); }
+.st-pass { color: var(--ok); font-weight: 700; }
+.st-fail { color: var(--err); font-weight: 700; }
+.st-info { color: var(--info); font-weight: 700; }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.guide li { margin-bottom: 8px; }
+.engine { font-size: 12px; color: var(--ink-soft); word-break: break-all; }
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-soft); display: flex; gap: 8px 18px; flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .col { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .col:last-child { border-bottom: 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div>
+    <h1>WHATWG vs RFC 3986 URL Parser Differential</h1>
+    <p class="tagline">Paste URLs and see, field by field, where your browser's WHATWG URL parser and a strict RFC 3986 grammar disagree on host, userinfo, port and path, including strings one accepts and the other rejects.</p>
+  </div>
+  <button class="themebtn" id="theme-toggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+
+<main>
+<p class="small" style="margin-top:16px">Each line gets three readings. <strong>A</strong> is the native <code>URL()</code> object in the browser you are using right now. <strong>B</strong> is a strict validator built from the RFC 3986 Appendix A grammar, with section 5.2 resolution, section 6.2 normalization and an RFC 9110 http(s) check. <strong>C</strong> is the Appendix B regular expression split, which takes any string. Nothing leaves this page.</p>
+
+<section class="panel" aria-labelledby="in-h">
+  <h2 id="in-h" style="margin-top:0">Input</h2>
+  <label for="urls">URLs, one per line (split on line feed only, never trimmed)</label>
+  <textarea id="urls" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+  <div class="fieldrow">
+    <div>
+      <label for="base">Optional base URL (relative lines are resolved against it on both sides)</label>
+      <input type="text" id="base" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="http://a/b/c/d;p?q">
+    </div>
+  </div>
+  <div class="checks">
+    <label><input type="checkbox" id="strict" checked> Strict RFC 3986 5.2.2 resolver (untick for the non-strict branch)</label>
+    <label><input type="checkbox" id="esc"> Decode <span class="mono">\t \r \n \\ \uXXXX</span> escapes</label>
+  </div>
+  <div class="row">
+    <button type="button" class="primary" id="run">Compare</button>
+    <button type="button" id="examples">Load example set</button>
+    <button type="button" id="clear">Clear</button>
+  </div>
+  <p class="small" style="margin-top:10px">With escapes off, a backslash is a literal backslash. Lines longer than 8192 characters are refused with an error. Markers such as <span class="mk">TAB</span> <span class="mk">SP</span> <span class="mk">BS</span> <span class="mk">U+FF47</span> show characters that would otherwise be invisible or easy to miss.</p>
+</section>
+
+<div id="trust" role="status" aria-live="polite"></div>
+
+<section aria-labelledby="res-h">
+  <h2 id="res-h">Results</h2>
+  <p class="engine" id="engine-line"></p>
+  <div id="summary" role="status" aria-live="polite"></div>
+  <div id="results"></div>
+</section>
+
+<section aria-labelledby="st-h">
+  <h2 id="st-h">Self test</h2>
+  <p class="small">Runs on every page load. HARD checks prove the RFC side of this page is implemented correctly; if any fails, the page says its results cannot be trusted. INFORMATIONAL checks measure the engine you are running, so their counts differ between browsers and are computed live.</p>
+  <div id="selftest"></div>
+</section>
+
+<section aria-labelledby="pr-h">
+  <h2 id="pr-h">Engine probes</h2>
+  <p class="small">Each probe states what the WHATWG URL Standard algorithm produces at the named anchor and what this engine actually returned. A deviation is information about the engine, not a failure of this page. Notation: <span class="mk">BS</span> is one U+005C backslash, <span class="mk">TAB</span> is one U+0009.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th scope="col">Probe</th><th scope="col">Expression</th><th scope="col">Expected</th><th scope="col">This engine</th><th scope="col">Result</th><th scope="col">WHATWG anchor</th></tr></thead>
+    <tbody id="probes"></tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="how-h">
+  <h2 id="how-h">How to use it</h2>
+  <ol class="guide">
+    <li><strong>Audit an allowlist or SSRF guard.</strong> Paste the URLs your validator approved, one per line. Any row with a <span class="badge b-flag">HOST SPLIT</span> flag is a string where the host this browser connects to differs from a host another reader would extract. If your check uses a splitter and your fetch uses a WHATWG engine, that row is the bypass shape.</li>
+    <li><strong>Decide where to reject.</strong> Column B tells you whether a strict RFC 3986 check would have refused the string outright, and names the first offending code point and the grammar rule. Several of the strings that split hosts never pass a strict check at all.</li>
+    <li><strong>Check an http(s) gate.</strong> RFC 3986 is generic syntax, so <span class="mono">http:/evil.com/</span> is a valid URI. The RFC 9110 line under column B says whether it is a valid http or https URI, and flags any userinfo.</li>
+    <li><strong>Compare normalizers and cache keys.</strong> The normalization steps in column B are RFC 3986 6.2.2.1, 6.2.2.2, 6.2.2.3 and, for http and https only, 6.2.3. A row that agrees only after normalization tells you which step your comparison needs.</li>
+    <li><strong>Test resolution.</strong> Put a base URL in the base field and relative references in the box. Column B resolves them with RFC 3986 5.2.2; the strict toggle switches the scheme loophole described in 5.4.2.</li>
+    <li><strong>Know your engine.</strong> The self test runs the 42 RFC 3986 section 5.4 examples through this browser's <code>URL()</code> and lists every mismatch live, and the probe table checks eleven parser rules. Run the page in each browser you ship to.</li>
+  </ol>
+  <p class="small">Result labels: <span class="badge b-agree">AGREE</span> <span class="badge b-norm">AGREE AFTER RFC NORMALIZATION</span> <span class="badge b-ip">SAME IP, DIFFERENT TEXT</span> <span class="badge b-dis">DISAGREE</span> <span class="badge b-rej">RFC REJECTS, BROWSER ACCEPTS</span> <span class="badge b-rej">BROWSER FAILS, RFC ACCEPTS</span> <span class="badge b-both">BOTH REJECT</span>. Every colour is paired with its text label.</p>
+</section>
+
+<section aria-labelledby="src-h">
+  <h2 id="src-h">Sources and scope</h2>
+  <p class="small">RFC 3986 (STD 66, January 2005): rfc-editor.org/rfc/rfc3986, sections 2.3, 3.2, 3.2.2, 4.1, 5.2, 5.4, 6.2.2, 6.2.3, 7.4, Appendix A and Appendix B. This page implements the published RFC 3986 text; errata are not applied. RFC 9110 (STD 97, June 2022): rfc-editor.org/rfc/rfc9110, sections 4.2.1, 4.2.2 and 4.2.4. WHATWG URL Standard (a Living Standard): url.spec.whatwg.org, anchors #concept-basic-url-parser, #authority-state, #special-authority-ignore-slashes-state, #port-state, #concept-ipv4-parser, #ends-in-a-number-checker, #double-dot-path-segment, #forbidden-host-code-point and #special-scheme. WHATWG behaviour is paraphrased, never quoted.</p>
+  <p class="small">RFC 3986 quotations and the 42 reference resolution vectors are from RFC 3986, Copyright (C) The Internet Society (2005). RFC 9110 quotations are from RFC 9110, Copyright (c) 2022 IETF Trust and the persons identified as the document authors. Behaviour is implemented from the published specifications; no code is reproduced here. IRIs (RFC 3987) are out of scope: any non-ASCII code point makes a string invalid under RFC 3986.</p>
+  <p class="small">This is an independent tool. It is not affiliated with, or endorsed by, the WHATWG, the IETF or any browser vendor.</p>
+</section>
+</main>
+
+<footer>
+  <a href="https://elitesystem.ai">elitesystem.ai</a>
+  <a href="https://github.com/0xelitesystem/whatwg-rfc3986-url-parser-differential">source</a>
+  <a href="https://0xelitesystem.github.io/">catalog</a>
+  <span>MIT licensed. Runs entirely in your browser.</span>
+</footer>
+</div>
+
+<script>
+/* WHATWG vs RFC 3986 URL Parser Differential. Everything runs locally. No network, no dependencies. */
+/*ENGINE-START*/
+var BS = String.fromCharCode(92);
+var TAB = String.fromCharCode(9);
+var CR = String.fromCharCode(13);
+var LF = String.fromCharCode(10);
+
+/* ---------- RFC 3986 Appendix A, composed into anchored regular expressions ---------- */
+var RX = (function () {
+  var pct = '%[0-9A-Fa-f]{2}';
+  var U = 'A-Za-z0-9._~';
+  var S = "!$&'()*+,;=";
+  var pchar = '(?:[' + U + S + ':@-]|' + pct + ')';
+  var userinfo = '(?:[' + U + S + ':-]|' + pct + ')*';
+  var regname = '(?:[' + U + S + '-]|' + pct + ')*';
+  var dec = '(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])';
+  var v4 = dec + '[.]' + dec + '[.]' + dec + '[.]' + dec;
+  var h = '[0-9A-Fa-f]{1,4}';
+  var ls32 = '(?:' + h + ':' + h + '|' + v4 + ')';
+  var v6 = '(?:' + [
+    '(?:' + h + ':){6}' + ls32,
+    '::(?:' + h + ':){5}' + ls32,
+    '(?:' + h + ')?::(?:' + h + ':){4}' + ls32,
+    '(?:(?:' + h + ':){0,1}' + h + ')?::(?:' + h + ':){3}' + ls32,
+    '(?:(?:' + h + ':){0,2}' + h + ')?::(?:' + h + ':){2}' + ls32,
+    '(?:(?:' + h + ':){0,3}' + h + ')?::' + h + ':' + ls32,
+    '(?:(?:' + h + ':){0,4}' + h + ')?::' + ls32,
+    '(?:(?:' + h + ':){0,5}' + h + ')?::' + h,
+    '(?:(?:' + h + ':){0,6}' + h + ')?::'
+  ].join('|') + ')';
+  var ipvf = '[vV][0-9A-Fa-f]+[.][' + U + S + ':-]+';
+  var ipliteral = '[[](?:' + v6 + '|' + ipvf + ')[' + BS + ']]';
+  var host = '(?:' + ipliteral + '|' + v4 + '|' + regname + ')';
+  var authority = '(?:' + userinfo + '@)?' + host + '(?::[0-9]*)?';
+  var seg = pchar + '*';
+  var segnz = pchar + '+';
+  var segnznc = '(?:[' + U + S + '@-]|' + pct + ')+';
+  var abempty = '(?:/' + seg + ')*';
+  var absolute = '/(?:' + segnz + '(?:/' + seg + ')*)?';
+  var noscheme = segnznc + '(?:/' + seg + ')*';
+  var rootless = segnz + '(?:/' + seg + ')*';
+  var qf = '(?:' + pchar + '|[/?])*';
+  var scheme = '[A-Za-z][A-Za-z0-9+.-]*';
+  var tail = '(?:[?]' + qf + ')?(?:#' + qf + ')?$';
+  return {
+    uri: new RegExp('^' + scheme + ':(?://' + authority + abempty + '|' + absolute + '|' + rootless + '|)' + tail),
+    rel: new RegExp('^(?://' + authority + abempty + '|' + absolute + '|' + noscheme + '|)' + tail),
+    v4: new RegExp('^' + v4 + '$'),
+    v6: new RegExp('^' + v6 + '$'),
+    vf: new RegExp('^' + ipvf + '$')
+  };
+})();
+
+/* RFC 3986 Appendix B, character for character. */
+var SPLIT = new RegExp('^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)([?]([^#]*))?(#([' + BS + 's' + BS + 'S]*))?');
+
+function regexVerdict(s) {
+  if (RX.uri.test(s)) return 'uri';
+  if (RX.rel.test(s)) return 'relative';
+  return 'invalid';
+}
+
+var C_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+var C_DIGIT = '0123456789';
+var C_UNRES = C_ALPHA + C_DIGIT + '-._~';
+var C_SUB = "!$&'()*+,;=";
+var SET_USER = C_UNRES + C_SUB + ':';
+var SET_REG = C_UNRES + C_SUB;
+var SET_PATH = C_UNRES + C_SUB + ':@/';
+var SET_QF = C_UNRES + C_SUB + ':@/?';
+var HEX = '0123456789ABCDEFabcdef';
+
+var RULES = {
+  scheme: 'scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )',
+  userinfo: 'userinfo = *( unreserved / pct-encoded / sub-delims / ":" )',
+  regname: 'reg-name = *( unreserved / pct-encoded / sub-delims )',
+  ipliteral: 'IP-literal = "[" ( IPv6address / IPvFuture ) "]"',
+  ipv6: 'IPv6address (nine alternatives, Appendix A)',
+  ipvf: 'IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )',
+  authority: 'authority = [ userinfo "@" ] host [ ":" port ]',
+  port: 'port = *DIGIT',
+  pct: 'pct-encoded = "%" HEXDIG HEXDIG',
+  pchar: 'pchar = unreserved / pct-encoded / sub-delims / ":" / "@"',
+  noscheme: 'path-noscheme = segment-nz-nc *( "/" segment )',
+  query: 'query = *( pchar / "/" / "?" )',
+  fragment: 'fragment = *( pchar / "/" / "?" )'
+};
+
+function cpHex(cp) { var h = cp.toString(16).toUpperCase(); while (h.length < 4) h = '0' + h; return 'U+' + h; }
+
+function mkErr(s, off, component, rule, msg) {
+  var cp = off < s.length ? s.codePointAt(off) : null;
+  var m = msg || '';
+  if (cp !== null && cp > 0x7f && !m) m = 'non-ASCII code points are not allowed in a URI; IRIs (RFC 3987) are out of scope';
+  return { offset: off, index: Array.from(s.slice(0, off)).length, cp: cp, cpText: cp === null ? 'end of input' : cpHex(cp), component: component, rule: rule, msg: m };
+}
+
+function checkChars(s, str, base, set, component, rule) {
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charAt(i);
+    if (c === '%') {
+      if (i + 2 < str.length && HEX.indexOf(str.charAt(i + 1)) >= 0 && HEX.indexOf(str.charAt(i + 2)) >= 0) { i += 2; continue; }
+      return mkErr(s, base + i, component, RULES.pct, 'a "%" must be followed by two hex digits');
+    }
+    if (set.indexOf(c) < 0) return mkErr(s, base + i, component, rule, null);
+  }
+  return null;
+}
+
+/* port = *DIGIT (3.2.3): no pct-encoded octets, so this does not share the "%" branch of checkChars. */
+function checkDigits(s, str, base, component, rule) {
+  for (var i = 0; i < str.length; i++) {
+    if (C_DIGIT.indexOf(str.charAt(i)) < 0) return mkErr(s, base + i, component, rule, str.charAt(i) === '%' ? 'port = *DIGIT; percent-encoding is not allowed in the port' : null);
+  }
+  return null;
+}
+
+function splitParts(s) {
+  var m = SPLIT.exec(s);
+  var r = { scheme: m[2], authority: m[4], path: m[5], query: m[7], fragment: m[9], pos: {} };
+  var off = 0;
+  if (m[1] !== undefined) { r.pos.scheme = 0; off = m[1].length; }
+  if (m[3] !== undefined) { r.pos.authority = off + 2; off += m[3].length; }
+  r.pos.path = off; off += m[5].length;
+  if (m[6] !== undefined) { r.pos.query = off + 1; off += m[6].length; }
+  if (m[8] !== undefined) { r.pos.fragment = off + 1; }
+  return r;
+}
+
+/* Strict authority split: one "@", IP-literal when it starts with "[", else the port follows the last ":". */
+function splitAuthorityStrict(a) {
+  var r = { userinfo: undefined, host: a, port: undefined, hostOff: 0 };
+  var at = a.indexOf('@');
+  if (at >= 0) { r.userinfo = a.slice(0, at); r.host = a.slice(at + 1); r.hostOff = at + 1; }
+  var hp = r.host;
+  if (hp.charAt(0) === '[') {
+    var close = hp.indexOf(']');
+    if (close >= 0) {
+      var rest = hp.slice(close + 1);
+      r.host = hp.slice(0, close + 1);
+      if (rest.charAt(0) === ':') r.port = rest.slice(1);
+      r.rest = rest;
+    }
+  } else {
+    var lc = hp.lastIndexOf(':');
+    if (lc >= 0) { r.host = hp.slice(0, lc); r.port = hp.slice(lc + 1); }
+  }
+  return r;
+}
+
+/* Appendix B column convention: userinfo ends at the LAST "@". RFC 3986 defines no split for invalid input. */
+function splitAuthorityLoose(a) {
+  var r = { userinfo: undefined, host: a, port: undefined };
+  var at = a.lastIndexOf('@');
+  if (at >= 0) { r.userinfo = a.slice(0, at); r.host = a.slice(at + 1); }
+  var hp = r.host;
+  if (hp.charAt(0) === '[' && hp.indexOf(']') >= 0) {
+    var close = hp.indexOf(']');
+    var rest = hp.slice(close + 1);
+    r.host = hp.slice(0, close + 1);
+    if (rest.charAt(0) === ':') r.port = rest.slice(1);
+  } else {
+    var lc = hp.lastIndexOf(':');
+    if (lc >= 0) { r.host = hp.slice(0, lc); r.port = hp.slice(lc + 1); }
+  }
+  return r;
+}
+
+function appendixB(s) {
+  var p = splitParts(s);
+  var out = { scheme: p.scheme, authority: p.authority, userinfo: undefined, host: undefined, port: undefined, path: p.path, query: p.query, fragment: p.fragment };
+  if (p.authority !== undefined) { var a = splitAuthorityLoose(p.authority); out.userinfo = a.userinfo; out.host = a.host; out.port = a.port; }
+  return out;
+}
+
+/* Component by component validation, reporting the first offending code point. */
+function diagnose(s) {
+  var p = splitParts(s);
+  var comps = { scheme: p.scheme, authority: p.authority, userinfo: undefined, host: undefined, hostType: undefined, port: undefined, path: p.path, query: p.query, fragment: p.fragment };
+  var err = null;
+  if (p.scheme !== undefined) {
+    for (var i = 0; i < p.scheme.length && !err; i++) {
+      var c = p.scheme.charAt(i);
+      var okc = i === 0 ? C_ALPHA.indexOf(c) >= 0 : (C_ALPHA + C_DIGIT + '+-.').indexOf(c) >= 0;
+      if (!okc) err = mkErr(s, i, 'scheme', RULES.scheme, i === 0 ? 'a scheme must start with a letter' : null);
+    }
+  }
+  if (!err && p.authority !== undefined) {
+    var a = p.authority, ao = p.pos.authority;
+    var sa = splitAuthorityStrict(a);
+    comps.userinfo = sa.userinfo; comps.host = sa.host; comps.port = sa.port;
+    if (sa.userinfo !== undefined) err = checkChars(s, sa.userinfo, ao, SET_USER, 'userinfo', RULES.userinfo);
+    var ho = ao + sa.hostOff;
+    var hp = a.slice(sa.hostOff);
+    if (!err) {
+      if (hp.charAt(0) === '[') {
+        var close = hp.indexOf(']');
+        if (close < 0) err = mkErr(s, ho, 'host', RULES.ipliteral, 'an IP-literal needs a closing "]"');
+        else {
+          var lit = hp.slice(1, close);
+          if (RX.v6.test(lit)) comps.hostType = 'IPv6address';
+          else if (RX.vf.test(lit)) comps.hostType = 'IPvFuture';
+          else {
+            var z = lit.indexOf('%');
+            if (z >= 0 && !/^[vV]/.test(lit)) err = mkErr(s, ho + 1 + z, 'host', RULES.ipv6, 'zone identifiers are not part of RFC 3986 (section 3.2.2)');
+            else if (/^[vV]/.test(lit)) err = mkErr(s, ho + 1, 'host', RULES.ipvf, 'the literal as a whole does not match IPvFuture');
+            else err = mkErr(s, ho + 1, 'host', RULES.ipv6, 'the literal as a whole does not match any IPv6address alternative');
+          }
+          if (!err) {
+            var rest = hp.slice(close + 1);
+            if (rest !== '' && rest.charAt(0) !== ':') err = mkErr(s, ho + close + 1, 'authority', RULES.authority, 'only ":" and a port may follow an IP-literal');
+            else if (rest !== '') err = checkDigits(s, rest.slice(1), ho + close + 2, 'port', RULES.port);
+          }
+        }
+      } else {
+        var lc = hp.lastIndexOf(':');
+        var hostStr = lc >= 0 ? hp.slice(0, lc) : hp;
+        err = checkChars(s, hostStr, ho, SET_REG, 'host', RULES.regname);
+        if (err && s.charAt(err.offset) === '@') err.msg = 'a second "@" cannot appear in the host; neither userinfo nor reg-name may contain "@"';
+        if (!err) comps.hostType = RX.v4.test(hostStr) ? 'IPv4address' : 'reg-name';
+        if (!err && lc >= 0) {
+          err = checkDigits(s, hp.slice(lc + 1), ho + lc + 1, 'port', RULES.port);
+        }
+      }
+    }
+  }
+  if (!err) {
+    var path = p.path, po = p.pos.path, prule;
+    if (p.authority !== undefined) prule = 'path-abempty = *( "/" segment ), ' + RULES.pchar;
+    else if (path.charAt(0) === '/') prule = 'path-absolute, ' + RULES.pchar;
+    else if (path === '') prule = 'path-empty';
+    else if (p.scheme !== undefined) prule = 'path-rootless, ' + RULES.pchar;
+    else prule = RULES.noscheme;
+    var e1 = checkChars(s, path, po, SET_PATH, 'path', prule);
+    var e2 = null;
+    if (p.scheme === undefined && p.authority === undefined && path !== '' && path.charAt(0) !== '/') {
+      var seg1 = path.split('/')[0];
+      var ci = seg1.indexOf(':');
+      if (ci >= 0) e2 = mkErr(s, po + ci, 'path', RULES.noscheme, 'the first segment of a relative-path reference cannot contain ":"');
+    }
+    err = e1 && e2 ? (e1.offset <= e2.offset ? e1 : e2) : (e1 || e2);
+  }
+  if (!err && p.query !== undefined) err = checkChars(s, p.query, p.pos.query, SET_QF, 'query', RULES.query);
+  if (!err && p.fragment !== undefined) err = checkChars(s, p.fragment, p.pos.fragment, SET_QF, 'fragment', RULES.fragment);
+  return { verdict: err ? 'invalid' : (p.scheme !== undefined ? 'uri' : 'relative'), error: err, comps: comps };
+}
+
+/* ---------- RFC 3986 5.2.4 remove_dot_segments, rules A to E, with an optional trace ---------- */
+function removeDotSegments(path, trace) {
+  var input = path, out = '';
+  if (trace) trace.push({ step: '1', out: '', input: input });
+  function dropLast() { var i = out.lastIndexOf('/'); out = i < 0 ? '' : out.slice(0, i); }
+  var guard = 0;
+  while (input.length && guard++ < 100000) {
+    var st;
+    if (input.slice(0, 3) === '../') { input = input.slice(3); st = '2A'; }
+    else if (input.slice(0, 2) === './') { input = input.slice(2); st = '2A'; }
+    else if (input.slice(0, 3) === '/./') { input = '/' + input.slice(3); st = '2B'; }
+    else if (input === '/.') { input = '/'; st = '2B'; }
+    else if (input.slice(0, 4) === '/../') { input = '/' + input.slice(4); dropLast(); st = '2C'; }
+    else if (input === '/..') { input = '/'; dropLast(); st = '2C'; }
+    else if (input === '.' || input === '..') { input = ''; st = '2D'; }
+    else {
+      var j = input.indexOf('/', input.charAt(0) === '/' ? 1 : 0);
+      if (j < 0) j = input.length;
+      out += input.slice(0, j); input = input.slice(j); st = '2E';
+    }
+    if (trace) trace.push({ step: st, out: out, input: input });
+  }
+  return out;
+}
+
+function mergePaths(base, refPath) {
+  if (base.authority !== undefined && base.path === '') return '/' + refPath;
+  var i = base.path.lastIndexOf('/');
+  return (i < 0 ? '' : base.path.slice(0, i + 1)) + refPath;
+}
+
+/* RFC 3986 5.2.2, with the strict flag exactly as in the pseudocode. */
+function resolveRef(R, B, strict) {
+  var T = {};
+  var rs = R.scheme;
+  if (!strict && rs !== undefined && B.scheme !== undefined && rs.toLowerCase() === B.scheme.toLowerCase()) rs = undefined;
+  if (rs !== undefined) {
+    T.scheme = rs; T.authority = R.authority; T.path = removeDotSegments(R.path); T.query = R.query;
+  } else {
+    if (R.authority !== undefined) {
+      T.authority = R.authority; T.path = removeDotSegments(R.path); T.query = R.query;
+    } else {
+      if (R.path === '') {
+        T.path = B.path;
+        T.query = R.query !== undefined ? R.query : B.query;
+      } else {
+        if (R.path.charAt(0) === '/') T.path = removeDotSegments(R.path);
+        else T.path = removeDotSegments(mergePaths(B, R.path));
+        T.query = R.query;
+      }
+      T.authority = B.authority;
+    }
+    T.scheme = B.scheme;
+  }
+  T.fragment = R.fragment;
+  return T;
+}
+
+/* RFC 3986 5.3 */
+function recompose(c) {
+  var r = '';
+  if (c.scheme !== undefined) r += c.scheme + ':';
+  if (c.authority !== undefined) r += '//' + c.authority;
+  r += c.path;
+  if (c.query !== undefined) r += '?' + c.query;
+  if (c.fragment !== undefined) r += '#' + c.fragment;
+  return r;
+}
+
+function resolveString(ref, base, strict) {
+  var R = splitParts(ref), B = splitParts(base);
+  return recompose(resolveRef(R, B, strict));
+}
+
+/* Expand a components object (with authority) into userinfo, host, port using the strict split. */
+function expand(c) {
+  var o = { scheme: c.scheme, authority: c.authority, userinfo: undefined, host: undefined, port: undefined, path: c.path, query: c.query, fragment: c.fragment };
+  if (c.authority !== undefined) { var a = splitAuthorityStrict(c.authority); o.userinfo = a.userinfo; o.host = a.host; o.port = a.port; }
+  return o;
+}
+function rebuildAuthority(o) {
+  if (o.host === undefined) return o.authority;
+  return (o.userinfo !== undefined ? o.userinfo + '@' : '') + o.host + (o.port !== undefined ? ':' + o.port : '');
+}
+function copy(o) { var r = {}; for (var k in o) r[k] = o[k]; return r; }
+
+function upperPct(str) {
+  if (str === undefined) return str;
+  return str.replace(/%([0-9A-Fa-f]{2})/g, function (m, h) { return '%' + h.toUpperCase(); });
+}
+function decodeUnreserved(str) {
+  if (str === undefined) return str;
+  return str.replace(/%([0-9A-Fa-f]{2})/g, function (m, h) {
+    var ch = String.fromCharCode(parseInt(h, 16));
+    return C_UNRES.indexOf(ch) >= 0 ? ch : m;
+  });
+}
+
+var DEFAULT_PORT = { http: { port: '80', cite: 'RFC 3986 6.2.3' }, https: { port: '443', cite: 'RFC 9110 4.2.2' } };
+
+/* RFC 3986 6.2.2.1, 6.2.2.2, 6.2.2.3, and 6.2.3 for http and https only. Returns each step. */
+function normalizeSteps(c0) {
+  var steps = [];
+  var a = copy(c0);
+  a.scheme = a.scheme !== undefined ? a.scheme.toLowerCase() : a.scheme;
+  if (a.host !== undefined) a.host = a.host.toLowerCase();
+  ['userinfo', 'host', 'path', 'query', 'fragment'].forEach(function (k) { a[k] = upperPct(a[k]); });
+  a.authority = rebuildAuthority(a);
+  steps.push({ id: '6.2.2.1', label: '6.2.2.1 case: lowercase scheme and host, uppercase percent-encoding hex', c: a });
+  var b = copy(a);
+  ['userinfo', 'host', 'path', 'query', 'fragment'].forEach(function (k) { b[k] = decodeUnreserved(b[k]); });
+  if (b.host !== undefined) b.host = b.host.toLowerCase();
+  b.authority = rebuildAuthority(b);
+  steps.push({ id: '6.2.2.2', label: '6.2.2.2 percent-encoding: decode octets of unreserved characters (section 2.3)', c: b });
+  var d = copy(b);
+  d.path = removeDotSegments(d.path);
+  steps.push({ id: '6.2.2.3', label: '6.2.2.3 path segments: remove_dot_segments (section 5.2.4)', c: d });
+  var sc = d.scheme;
+  if (sc === 'http' || sc === 'https') {
+    var e = copy(d);
+    if (e.authority !== undefined) {
+      if (e.path === '') e.path = '/';
+      if (e.port !== undefined && (e.port === '' || (/^[0-9]+$/.test(e.port) && Number(e.port) === Number(DEFAULT_PORT[sc].port)))) e.port = undefined;
+      e.authority = rebuildAuthority(e);
+    }
+    steps.push({ id: '6.2.3', label: '6.2.3 scheme-based (' + sc + '): empty path is "/", empty or default port ' + DEFAULT_PORT[sc].port + ' elided (' + DEFAULT_PORT[sc].cite + ')', c: e });
+  }
+  return steps;
+}
+
+/* RFC 9110 4.2.1, 4.2.2, 4.2.4 */
+function httpCheck(c) {
+  var sc = c.scheme !== undefined ? c.scheme.toLowerCase() : undefined;
+  if (sc !== 'http' && sc !== 'https') return { applies: false };
+  var r = { applies: true, scheme: sc, valid: true, reason: '', userinfo: c.userinfo !== undefined };
+  if (c.authority === undefined) { r.valid = false; r.reason = 'no // authority'; }
+  else if (c.host === undefined || c.host === '') { r.valid = false; r.reason = 'empty host'; }
+  return r;
+}
+
+/* IPv6 text to eight 16-bit pieces, for value comparison. */
+function parseV6(t) {
+  t = t.toLowerCase();
+  var m = /^(.*:)([0-9]+)[.]([0-9]+)[.]([0-9]+)[.]([0-9]+)$/.exec(t);
+  if (m) {
+    var o = [m[2], m[3], m[4], m[5]].map(Number);
+    if (o.some(function (x) { return x > 255; })) return null;
+    t = m[1] + ((o[0] << 8) | o[1]).toString(16) + ':' + ((o[2] << 8) | o[3]).toString(16);
+  }
+  var parts = t.split('::');
+  if (parts.length > 2) return null;
+  var head = parts[0] ? parts[0].split(':') : [];
+  var tl = parts.length === 2 && parts[1] ? parts[1].split(':') : [];
+  var all;
+  if (parts.length === 1) all = head;
+  else {
+    var fill = 8 - head.length - tl.length;
+    if (fill < 1) return null;
+    all = head.concat(new Array(fill).fill('0'), tl);
+  }
+  if (all.length !== 8) return null;
+  var out = [];
+  for (var i = 0; i < 8; i++) { if (!/^[0-9a-f]{1,4}$/.test(all[i])) return null; out.push(parseInt(all[i], 16)); }
+  return out;
+}
+
+/* Native WHATWG reading. new URL() makes no network request. */
+function readNative(input, base) {
+  try {
+    var u = base === undefined ? new URL(input) : new URL(input, base);
+    return { ok: true, href: u.href, protocol: u.protocol, username: u.username, password: u.password, hostname: u.hostname, port: u.port, pathname: u.pathname, search: u.search, hash: u.hash };
+  } catch (e) {
+    return { ok: false, error: (e && e.name) ? e.name : 'Error' };
+  }
+}
+
+var WHATWG_SPECIAL = { ftp: '21', http: '80', https: '443', ws: '80', wss: '443' };
+var RANK = { 'AGREE': 1, 'AGREE AFTER RFC NORMALIZATION': 2, 'SAME IP, DIFFERENT TEXT': 3, 'DISAGREE': 4 };
+
+/* Compare one component: raw, then each normalization step in order. */
+function stepCompare(rawVal, stepVals, nat) {
+  if ((rawVal === undefined ? '' : rawVal) === nat) return { cls: 'AGREE', steps: [] };
+  var used = [];
+  var prev = rawVal === undefined ? '' : rawVal;
+  for (var i = 0; i < stepVals.length; i++) {
+    var v = stepVals[i].v === undefined ? '' : stepVals[i].v;
+    if (v !== prev) used.push(stepVals[i].id);
+    prev = v;
+    if (v === nat) return { cls: 'AGREE AFTER RFC NORMALIZATION', steps: used };
+  }
+  return { cls: 'DISAGREE', steps: [] };
+}
+
+function compareComponents(rfc, steps, nat) {
+  var res = {};
+  function sv(k) { return steps.map(function (s) { return { id: s.id, v: s.c[k] }; }); }
+  var natScheme = nat.protocol.replace(/:$/, '');
+  res.scheme = stepCompare(rfc.scheme, sv('scheme'), natScheme);
+  res.scheme.rfc = rfc.scheme; res.scheme.nat = natScheme;
+  var natUser = nat.username + (nat.password !== '' ? ':' + nat.password : '');
+  res.userinfo = stepCompare(rfc.userinfo, sv('userinfo'), natUser);
+  res.userinfo.rfc = rfc.userinfo; res.userinfo.nat = natUser;
+  var hc = stepCompare(rfc.host, sv('host'), nat.hostname);
+  if (hc.cls === 'DISAGREE' && rfc.hostType === 'IPv6address' && nat.hostname.charAt(0) === '[') {
+    var x = parseV6(rfc.host.slice(1, -1)), y = parseV6(nat.hostname.slice(1, -1));
+    if (x && y && x.join(',') === y.join(',')) hc = { cls: 'SAME IP, DIFFERENT TEXT', steps: [] };
+  }
+  hc.rfc = rfc.authority === undefined ? undefined : rfc.host; hc.nat = nat.hostname; hc.noAuthority = rfc.authority === undefined;
+  res.host = hc;
+  var sc = rfc.scheme !== undefined ? rfc.scheme.toLowerCase() : '';
+  var rp = rfc.port === undefined ? '' : rfc.port;
+  var pc;
+  if (rp === nat.port) pc = { cls: 'AGREE', steps: [] };
+  else if (nat.port === '' && DEFAULT_PORT[sc] && /^[0-9]+$/.test(rp) && Number(rp) === Number(DEFAULT_PORT[sc].port)) pc = { cls: 'AGREE AFTER RFC NORMALIZATION', steps: ['6.2.3'], cite: DEFAULT_PORT[sc].cite };
+  else if (/^[0-9]+$/.test(rp) && nat.port !== '' && Number(rp) === Number(nat.port)) pc = { cls: 'DISAGREE', steps: [], note: 'Same number, different text: the browser drops leading zeros. RFC 3986 does not define that equivalence.' };
+  else {
+    pc = { cls: 'DISAGREE', steps: [] };
+    if (nat.port === '' && WHATWG_SPECIAL[sc] && /^[0-9]+$/.test(rp) && Number(rp) === Number(WHATWG_SPECIAL[sc])) pc.note = 'Browser side: ' + sc + ' is a WHATWG special scheme with default port ' + WHATWG_SPECIAL[sc] + ' (#special-scheme), so the browser elides it. No RFC rule verified here does that for ' + sc + '.';
+  }
+  pc.rfc = rfc.port; pc.nat = nat.port;
+  res.port = pc;
+  res.path = stepCompare(rfc.path, sv('path'), nat.pathname);
+  res.path.rfc = rfc.path; res.path.nat = nat.pathname;
+  var worst = 'AGREE';
+  ['scheme', 'userinfo', 'host', 'port', 'path'].forEach(function (k) { if (RANK[res[k].cls] > RANK[worst]) worst = res[k].cls; });
+  res.rollup = worst;
+  return res;
+}
+
+function sameHost(a, b) {
+  if (a === undefined || b === undefined) return a === b;
+  var na = decodeUnreserved(upperPct(a)).toLowerCase(), nb = decodeUnreserved(upperPct(b)).toLowerCase();
+  if (na === nb) return true;
+  if (na.charAt(0) === '[' && nb.charAt(0) === '[') {
+    var x = parseV6(na.slice(1, -1)), y = parseV6(nb.slice(1, -1));
+    return !!(x && y && x.join(',') === y.join(','));
+  }
+  return false;
+}
+
+/* Full analysis of one input line. */
+function analyze(input, baseStr, strict) {
+  var out = { input: input };
+  out.regex = regexVerdict(input);
+  out.diag = diagnose(input);
+  out.appB = appendixB(input);
+  var useBase = baseStr !== undefined && baseStr !== '';
+  out.useBase = useBase;
+  out.nat = readNative(input, useBase ? baseStr : undefined);
+  var rfcValid = out.diag.verdict !== 'invalid';
+  var target = null;
+  if (useBase) {
+    var bd = diagnose(baseStr);
+    out.baseDiag = bd;
+    if (bd.verdict === 'uri' && rfcValid) {
+      var B = splitParts(baseStr); B.fragment = undefined;
+      var T = resolveRef(splitParts(input), B, strict);
+      target = expand(T);
+      target.hostType = target.authority !== undefined ? diagnose(recompose(T)).comps.hostType : undefined;
+      out.resolved = recompose(T);
+    } else if (bd.verdict !== 'uri') {
+      out.baseProblem = bd.verdict === 'invalid' ? 'base URL is not valid under RFC 3986' : 'base URL must be an absolute URI (RFC 3986 5.1)';
+    }
+  } else if (rfcValid && out.diag.verdict === 'uri') {
+    target = out.diag.comps;
+  }
+  out.target = target;
+  out.steps = target ? normalizeSteps(target) : null;
+  out.http = target ? httpCheck(target) : { applies: false };
+  if (!rfcValid && out.nat.ok) out.rollup = 'RFC REJECTS, BROWSER ACCEPTS';
+  else if (!rfcValid && !out.nat.ok) out.rollup = 'BOTH REJECT';
+  else if (rfcValid && !target) out.rollup = out.baseProblem ? 'BASE PROBLEM' : 'RELATIVE, NO BASE';
+  else if (!out.nat.ok) out.rollup = 'BROWSER FAILS, RFC ACCEPTS';
+  else {
+    out.cmp = compareComponents(target, out.steps, out.nat);
+    out.rollup = out.cmp.rollup;
+  }
+  out.hostSplit = false;
+  if (out.nat.ok) {
+    var nh = out.nat.hostname;
+    var strictHost = target ? (target.authority === undefined ? '' : target.host) : undefined;
+    var bHost = useBase ? undefined : (out.appB.authority === undefined ? undefined : out.appB.host);
+    if (strictHost !== undefined && !sameHost(strictHost, nh)) out.hostSplit = true;
+    if (bHost !== undefined && !sameHost(bHost, nh)) out.hostSplit = true;
+    if (!rfcValid && bHost === undefined && !useBase && out.appB.authority === undefined && nh !== '') out.hostSplit = true;
+  }
+  return out;
+}
+
+/* Escapes, only when the toggle is on. Unknown escapes stay literal. */
+function decodeEscapes(line) {
+  var out = '', i = 0;
+  while (i < line.length) {
+    var c = line.charAt(i);
+    if (c === BS && i + 1 < line.length) {
+      var n = line.charAt(i + 1);
+      if (n === 't') { out += TAB; i += 2; continue; }
+      if (n === 'r') { out += CR; i += 2; continue; }
+      if (n === 'n') { out += LF; i += 2; continue; }
+      if (n === BS) { out += BS; i += 2; continue; }
+      if (n === 'u' && /^[0-9A-Fa-f]{4}$/.test(line.substr(i + 2, 4))) { out += String.fromCharCode(parseInt(line.substr(i + 2, 4), 16)); i += 6; continue; }
+    }
+    out += c; i++;
+  }
+  return out;
+}
+
+/* ---------- Fixtures ---------- */
+/* RFC 3986 section 5.4.1 (23) and 5.4.2 (19), base http://a/b/c/d;p?q. Copyright (C) The Internet Society (2005). */
+var RFC_BASE = 'http://a/b/c/d;p?q';
+var VECTORS = [
+  ['g:h', 'g:h'], ['g', 'http://a/b/c/g'], ['./g', 'http://a/b/c/g'], ['g/', 'http://a/b/c/g/'], ['/g', 'http://a/g'],
+  ['//g', 'http://g'], ['?y', 'http://a/b/c/d;p?y'], ['g?y', 'http://a/b/c/g?y'], ['#s', 'http://a/b/c/d;p?q#s'],
+  ['g#s', 'http://a/b/c/g#s'], ['g?y#s', 'http://a/b/c/g?y#s'], [';x', 'http://a/b/c/;x'], ['g;x', 'http://a/b/c/g;x'],
+  ['g;x?y#s', 'http://a/b/c/g;x?y#s'], ['', 'http://a/b/c/d;p?q'], ['.', 'http://a/b/c/'], ['./', 'http://a/b/c/'],
+  ['..', 'http://a/b/'], ['../', 'http://a/b/'], ['../g', 'http://a/b/g'], ['../..', 'http://a/'], ['../../', 'http://a/'],
+  ['../../g', 'http://a/g'],
+  ['../../../g', 'http://a/g'], ['../../../../g', 'http://a/g'],
+  ['/./g', 'http://a/g'], ['/../g', 'http://a/g'], ['g.', 'http://a/b/c/g.'], ['.g', 'http://a/b/c/.g'],
+  ['g..', 'http://a/b/c/g..'], ['..g', 'http://a/b/c/..g'],
+  ['./../g', 'http://a/b/g'], ['./g/.', 'http://a/b/c/g/'], ['g/./h', 'http://a/b/c/g/h'], ['g/../h', 'http://a/b/c/h'],
+  ['g;x=1/./y', 'http://a/b/c/g;x=1/y'], ['g;x=1/../y', 'http://a/b/c/y'],
+  ['g?y/./x', 'http://a/b/c/g?y/./x'], ['g?y/../x', 'http://a/b/c/g?y/../x'], ['g#s/./x', 'http://a/b/c/g#s/./x'],
+  ['g#s/../x', 'http://a/b/c/g#s/../x'],
+  ['http:g', 'http:g']
+];
+var VECTOR_SPLIT = 23;
+var HTTP_G_COMPAT = 'http://a/b/c/g';
+
+/* Example set: [string, expected RFC verdict, number of U+005C characters]. */
+function exampleSet() {
+  return [
+    ['http://evil.com' + BS + '@good.com/', 'invalid', 1],
+    ['http://0x7f.1/', 'uri', 0],
+    ['http://2130706433/', 'uri', 0],
+    ['http://1.2.3.4.5/', 'uri', 0],
+    ['http://a/%2e%2e/secret', 'uri', 0],
+    ['http://a@b@good.com/', 'invalid', 0],
+    ['http:/evil.com/', 'uri', 0],
+    ['https:evil.com', 'uri', 0],
+    ['http:///good.com/', 'uri', 0],
+    ['http://good.com:65536/', 'uri', 0],
+    ['http://good.com%00.evil.com/', 'uri', 0],
+    ['http://evil.com%5c@good.com/', 'uri', 0],
+    ['http://evil.com#@good.com/', 'uri', 0],
+    ['http://[::ffff:127.0.0.1]/', 'uri', 0],
+    ['http://[V1.x]/', 'uri', 0],
+    ['HTTP://GOOD.COM:80/', 'uri', 0],
+    [' http://a/', 'invalid', 0],
+    ['http://go' + TAB + 'od.com/', 'invalid', 0]
+  ];
+}
+function validatorFixtures() {
+  return exampleSet().concat([
+    ['http://good.com:0x50/', 'invalid', 0],
+    ['http://good.com:%38%30/', 'invalid', 0],
+    ['http://[::1]:%38%30/', 'invalid', 0],
+    ['http://' + String.fromCharCode(0xff47) + 'ood.com/', 'invalid', 0],
+    ['http://exa mple.com/', 'invalid', 0],
+    ['http://@good.com/', 'uri', 0],
+    ['http://:@good.com/', 'uri', 0],
+    ['http://[fe80::1%25eth0]/', 'invalid', 0],
+    ['http://a/%zz', 'invalid', 0],
+    ['http://a/%2', 'invalid', 0],
+    ['a:', 'uri', 0],
+    ['://a', 'invalid', 0],
+    ['./a:b', 'relative', 0],
+    ['http://[::]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:7:8]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:7:8:9]/', 'invalid', 0],
+    ['http://[1::2::3]/', 'invalid', 0],
+    ['http://[::1.2.3.4]/', 'uri', 0],
+    ['http://[::FFFF:1.2.3.4]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:1.2.3.4]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:7]/', 'invalid', 0],
+    ['http://[::2:3:4:5:6:7:8]/', 'uri', 0],
+    ['http://[::2:3:4:5:6:7:8:9]/', 'invalid', 0],
+    ['http://[1::3:4:5:6:7:8]/', 'uri', 0],
+    ['http://[1:2::4:5:6:7:8]/', 'uri', 0],
+    ['http://[1:2:3::5:6:7:8]/', 'uri', 0],
+    ['http://[1:2:3:4::6:7:8]/', 'uri', 0],
+    ['http://[1:2:3:4:5::7:8]/', 'uri', 0],
+    ['http://[1:2:3:4:5::1.2.3.4]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6::8]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:7::]/', 'uri', 0],
+    ['http://[1:2:3:4:5:6:7:8::]/', 'invalid', 0],
+    ['http://[12345::]/', 'invalid', 0],
+    ['http://[::1.2.3.256]/', 'invalid', 0],
+    ['http://[:::]/', 'invalid', 0],
+    ['http://[::g]/', 'invalid', 0],
+    ['http://[::1/', 'invalid', 0],
+    ['http://[::1]x/', 'invalid', 0],
+    ['http://[::1]:8080/', 'uri', 0],
+    ['http://[vF.a:b]/', 'uri', 0],
+    ['http://[v.x]/', 'invalid', 0],
+    ['http://[v1.]/', 'invalid', 0],
+    ['1a:b', 'invalid', 0],
+    ['a/b:c', 'relative', 0],
+    ['', 'relative', 0],
+    ['//a', 'relative', 0],
+    ['http://a/b#c#d', 'invalid', 0]
+  ]);
+}
+
+/* Engine probes P1 to P11. Expected values follow the WHATWG URL Standard algorithm. */
+var THROWS = '(failure)';
+function probeList() {
+  return [
+    { id: 'P1', code: "new URL('http://evil.com<BS>@good.com/').hostname", expect: 'evil.com', anchor: '#authority-state (special URL: a backslash ends the authority)', input: 'http://evil.com' + BS + '@good.com/', bs: 1, f: function () { return new URL(this.input).hostname; } },
+    { id: 'P2', code: "new URL('http://0x7f.1/').hostname", expect: '127.0.0.1', anchor: '#concept-ipv4-parser', bs: 0, f: function () { return new URL('http://0x7f.1/').hostname; } },
+    { id: 'P3', code: "new URL('http://1.2.3.4.5/')", expect: THROWS, anchor: '#ends-in-a-number-checker, then #concept-ipv4-parser (more than four parts)', bs: 0, f: function () { return new URL('http://1.2.3.4.5/').hostname; } },
+    { id: 'P4', code: "new URL('http://exa mple.com/')", expect: THROWS, anchor: '#forbidden-host-code-point (U+0020 is forbidden)', bs: 0, f: function () { return new URL('http://exa mple.com/').hostname; } },
+    { id: 'P5', code: "new URL('g:h', 'http://a/b/c/d;p?q').href", expect: 'g:h', anchor: '#concept-basic-url-parser', bs: 0, f: function () { return new URL('g:h', RFC_BASE).href; } },
+    { id: 'P6', code: "new URL('http://a/b/%2e%2E/c').pathname", expect: '/c', anchor: '#double-dot-path-segment (ASCII case-insensitive)', bs: 0, f: function () { return new URL('http://a/b/%2e%2E/c').pathname; } },
+    { id: 'P7', code: "new URL('http://go<TAB>od.com/').hostname", expect: 'good.com', anchor: '#concept-basic-url-parser (ASCII tab or newline removed)', bs: 0, f: function () { return new URL('http://go' + TAB + 'od.com/').hostname; } },
+    { id: 'P8', code: "new URL('http://a@b@good.com/').username", expect: 'a%40b', anchor: '#authority-state (an earlier "@" is kept as %40)', bs: 0, f: function () { return new URL('http://a@b@good.com/').username; } },
+    { id: 'P9', code: "new URL('http://good.com:65536/')", expect: THROWS, anchor: '#port-state (port must fit 16 bits)', bs: 0, f: function () { return new URL('http://good.com:65536/').port; } },
+    { id: 'P10', code: "new URL('http:<BS><BS>evil.com/').hostname", expect: 'evil.com', anchor: '#special-authority-ignore-slashes-state', input: 'http:' + BS + BS + 'evil.com/', bs: 2, f: function () { return new URL(this.input).hostname; } },
+    { id: 'P11', code: "new URL(' http://a/ ').href", expect: 'http://a/', anchor: '#concept-basic-url-parser (leading and trailing C0 control or space removed)', bs: 0, f: function () { return new URL(' http://a/ ').href; } }
+  ];
+}
+function runProbe(p) { try { return String(p.f()); } catch (e) { return THROWS; } }
+
+function countBS(s) { var n = 0; for (var i = 0; i < s.length; i++) if (s.charCodeAt(i) === 92) n++; return n; }
+
+/* Equivalence of two absolute http(s) URIs under RFC 3986 6.2.3 only. */
+function equiv623(a, b) {
+  function n(s) {
+    var c = expand(splitParts(s));
+    var sc = c.scheme !== undefined ? c.scheme.toLowerCase() : '';
+    if ((sc === 'http' || sc === 'https') && c.authority !== undefined) {
+      if (c.path === '') c.path = '/';
+      if (c.port !== undefined && (c.port === '' || c.port === DEFAULT_PORT[sc].port)) c.port = undefined;
+      c.authority = rebuildAuthority(c);
+    }
+    return recompose(c);
+  }
+  return n(a) === n(b);
+}
+
+function runSelfTest() {
+  var res = [];
+  function add(id, kind, ok, title, detail) { res.push({ id: id, kind: kind, ok: ok, title: title, detail: detail || [] }); }
+  var d, i, fails;
+
+  /* S1 */
+  fails = [];
+  for (i = 0; i < VECTORS.length; i++) {
+    var got = resolveString(VECTORS[i][0], RFC_BASE, true);
+    if (got !== VECTORS[i][1]) fails.push('"' + VECTORS[i][0] + '" gave "' + got + '", expected "' + VECTORS[i][1] + '"');
+  }
+  var nonStrict = resolveString('http:g', RFC_BASE, false);
+  if (nonStrict !== HTTP_G_COMPAT) fails.push('non-strict "http:g" gave "' + nonStrict + '"');
+  var countOk = VECTORS.length === 42 && VECTOR_SPLIT === 23;
+  if (!countOk) fails.push('vector table does not hold 23 + 19 entries');
+  add('S1', 'HARD', fails.length === 0, 'RFC 3986 5.4.1 and 5.4.2 vectors through the strict resolver: ' + (VECTORS.length - fails.length) + ' of ' + VECTORS.length + ' exact; non-strict "http:g" gives "' + nonStrict + '"', fails);
+
+  /* S2 */
+  fails = [];
+  var t1 = [], t2 = [];
+  var r1 = removeDotSegments('/a/b/c/./../../g', t1), r2 = removeDotSegments('mid/content=5/../6', t2);
+  var s1 = t1.slice(1).map(function (x) { return x.step; }).join(' '), s2 = t2.slice(1).map(function (x) { return x.step; }).join(' ');
+  if (r1 !== '/a/g') fails.push('first trace gave ' + r1);
+  if (r2 !== 'mid/6') fails.push('second trace gave ' + r2);
+  if (s1 !== '2E 2E 2E 2B 2C 2C 2E') fails.push('first trace steps ' + s1);
+  if (s2 !== '2E 2E 2C 2E') fails.push('second trace steps ' + s2);
+  add('S2', 'HARD', fails.length === 0, 'RFC 3986 5.2.4 traces: "/a/b/c/./../../g" gives "' + r1 + '" (' + s1 + '), "mid/content=5/../6" gives "' + r2 + '" (' + s2 + ')', fails);
+
+  /* S3 and S4 */
+  var fx = validatorFixtures();
+  fails = [];
+  var f4 = [];
+  for (i = 0; i < fx.length; i++) {
+    var rv = regexVerdict(fx[i][0]);
+    d = diagnose(fx[i][0]);
+    if (d.verdict !== fx[i][1]) fails.push(JSON.stringify(fx[i][0]) + ': diagnostic says ' + d.verdict + ', expected ' + fx[i][1]);
+    if (rv !== d.verdict) f4.push(JSON.stringify(fx[i][0]) + ': regex says ' + rv + ', diagnostic says ' + d.verdict);
+  }
+  add('S3', 'HARD', fails.length === 0, 'Validator fixtures: ' + (fx.length - fails.length) + ' of ' + fx.length + ' verdicts as expected (includes all nine IPv6address alternatives and the IPvFuture cases)', fails);
+  add('S4', 'HARD', f4.length === 0, 'Regex verdict equals diagnostic verdict on every fixture: ' + (fx.length - f4.length) + ' of ' + fx.length, f4);
+
+  /* S5 */
+  fails = [];
+  var hc = [['http:/evil.com/', false, 'no // authority'], ['http:///good.com/', false, 'empty host'], ['https:evil.com', false, 'no // authority'], ['http://a/', true, '']];
+  for (i = 0; i < hc.length; i++) {
+    var h = httpCheck(diagnose(hc[i][0]).comps);
+    if (!h.applies || h.valid !== hc[i][1] || h.reason !== hc[i][2]) fails.push(hc[i][0] + ' gave ' + (h.valid ? 'valid' : 'invalid: ' + h.reason));
+  }
+  add('S5', 'HARD', fails.length === 0, 'RFC 9110 http(s) layer: http:/evil.com/ and https:evil.com have no // authority, http:///good.com/ has an empty host, http://a/ is valid', fails);
+
+  /* S6 */
+  fails = [];
+  var bsFix = exampleSet().map(function (e) { return [e[0], e[2]]; });
+  probeList().forEach(function (p) { if (p.bs) bsFix.push([p.input, p.bs]); });
+  bsFix.push(['http://' + 'a'.repeat(32) + BS, 1]);
+  bsFix.forEach(function (b) { var n = countBS(b[0]); if (n !== b[1]) fails.push(JSON.stringify(b[0]) + ' holds ' + n + ' U+005C, expected ' + b[1]); });
+  var withBs = bsFix.filter(function (b) { return b[1] > 0; }).length;
+  add('S6', 'HARD', fails.length === 0, 'Backslash fixtures still hold their U+005C characters (char code 92): ' + (withBs - fails.length) + ' of ' + withBs, fails);
+
+  /* S7 */
+  var mism = [];
+  for (i = 0; i < VECTORS.length; i++) {
+    var ref = VECTORS[i][0], exp = VECTORS[i][1];
+    var n = readNative(ref, RFC_BASE);
+    var got2 = n.ok ? n.href : THROWS;
+    if (got2 === exp) continue;
+    var cls;
+    if (n.ok && equiv623(got2, exp)) cls = 'EQUIVALENT under RFC 3986 6.2.3';
+    else if (ref === 'http:g' && got2 === HTTP_G_COMPAT) cls = 'EQUALS the RFC 5.4.2 "for backward compatibility" alternative';
+    else cls = 'ENGINE DEVIATION';
+    mism.push('"' + ref + '" expected "' + exp + '", this engine gave "' + got2 + '": ' + cls);
+  }
+  add('S7', 'INFO', true, "The same 42 vectors through this browser's URL(): " + mism.length + ' differ from the RFC strict result', mism);
+
+  /* S8 */
+  var pr = probeList(), dev = 0;
+  pr.forEach(function (p) { if (runProbe(p) !== p.expect) dev++; });
+  add('S8', 'INFO', true, 'Engine probes P1 to P11: ' + (pr.length - dev) + ' match the WHATWG algorithm, ' + dev + ' deviate (see the probe table)', []);
+
+  /* S9 */
+  var ctrl = resolveString('../g', RFC_BASE, true);
+  var ctrlPassed = ctrl === 'http://a/g';
+  add('S9', 'HARD', !ctrlPassed, ctrlPassed ? 'POSITIVE CONTROL PASSED, which means the harness is broken' : 'Positive control: "../g" was asserted to give "http://a/g"; it gave "' + ctrl + '", so the control failed as expected', []);
+
+  /* S10 */
+  var big = 'http://' + 'a'.repeat(10000) + BS;
+  var best = Infinity, verdictBig = '';
+  for (i = 0; i < 3; i++) {
+    var t0 = (typeof performance !== 'undefined' ? performance : Date).now();
+    verdictBig = regexVerdict(big); diagnose(big);
+    var dt = (typeof performance !== 'undefined' ? performance : Date).now() - t0;
+    if (dt < best) best = dt;
+  }
+  add('S10', 'HARD', best < 50 && verdictBig === 'invalid' && countBS(big) === 1, 'ReDoS guard: a 10,008 character hostile string validated in ' + best.toFixed(1) + ' ms (limit 50 ms), verdict ' + verdictBig, []);
+
+  return res;
+}
+/*ENGINE-END*/
+
+/* ---------- UI ---------- */
+(function () {
+  if (typeof document === 'undefined') return;
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function append(parent) { for (var i = 1; i < arguments.length; i++) { var c = arguments[i]; if (c === null || c === undefined) continue; parent.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); } return parent; }
+
+  /* Render a string with visible markers, never trimmed. */
+  function marked(s) {
+    var frag = document.createDocumentFragment();
+    if (s === '') { frag.appendChild(el('span', 'mk', 'EMPTY')); return frag; }
+    var lead = 0; while (lead < s.length && s.charAt(lead) === ' ') lead++;
+    var trail = s.length; while (trail > lead && s.charAt(trail - 1) === ' ') trail--;
+    var buf = '';
+    function flush() { if (buf) { frag.appendChild(document.createTextNode(buf)); buf = ''; } }
+    for (var i = 0; i < s.length; i++) {
+      var cp = s.codePointAt(i);
+      var ch = String.fromCodePoint(cp);
+      var mk = null;
+      if (cp === 9) mk = 'TAB';
+      else if (cp === 13) mk = 'CR';
+      else if (cp === 10) mk = 'LF';
+      else if (cp === 92) mk = 'BS';
+      else if (cp === 32 && (i < lead || i >= trail)) mk = 'SP';
+      else if (cp < 32 || cp === 127 || cp > 126) mk = cpHex(cp);
+      if (mk) { flush(); frag.appendChild(el('span', 'mk', mk)); }
+      else buf += ch;
+      if (cp > 0xffff) i++;
+    }
+    flush();
+    return frag;
+  }
+  function mval(v) {
+    var dd = el('dd');
+    if (v === undefined) { dd.appendChild(el('span', 'small', '(undefined)')); return dd; }
+    if (v === '') { dd.appendChild(el('span', 'small', '(empty)')); return dd; }
+    dd.appendChild(marked(v)); return dd;
+  }
+  function kv(pairs) {
+    var dl = el('dl', 'kv');
+    pairs.forEach(function (p) { dl.appendChild(el('dt', null, p[0])); dl.appendChild(mval(p[1])); });
+    return dl;
+  }
+  var BADGE = {
+    'AGREE': 'b-agree', 'AGREE AFTER RFC NORMALIZATION': 'b-norm', 'SAME IP, DIFFERENT TEXT': 'b-ip', 'DISAGREE': 'b-dis',
+    'RFC REJECTS, BROWSER ACCEPTS': 'b-rej', 'BROWSER FAILS, RFC ACCEPTS': 'b-rej', 'BOTH REJECT': 'b-both',
+    'RELATIVE, NO BASE': 'b-note', 'BASE PROBLEM': 'b-note'
+  };
+  function badge(label) { return el('span', 'badge ' + (BADGE[label] || 'b-note'), label); }
+
+  function nativeCol(a, input) {
+    var col = el('div', 'col');
+    append(col, el('h3', null, "A. This browser's URL()"));
+    append(col, el('p', 'sub', '(the WHATWG URL Standard as implemented by this engine)'));
+    if (!a.nat.ok) {
+      append(col, el('p', 'verdict v-bad', 'failure: new URL() threw ' + a.nat.error));
+    } else {
+      append(col, el('p', 'verdict v-ok', 'parsed'));
+      append(col, kv([['href', a.nat.href], ['protocol', a.nat.protocol], ['username', a.nat.username], ['password', a.nat.password], ['hostname', a.nat.hostname], ['port', a.nat.port], ['pathname', a.nat.pathname], ['search', a.nat.search], ['hash', a.nat.hash]]));
+    }
+    var cites = ['WHATWG URL Standard #concept-basic-url-parser'];
+    var sch = (a.appB.scheme || '').toLowerCase();
+    var special = Object.prototype.hasOwnProperty.call(WHATWG_SPECIAL, sch);
+    if (input.indexOf(BS) >= 0 && special) {
+      var after = input.slice(input.indexOf(':') + 1);
+      /* The whole leading run of "/" and backslash is skipped; only a backslash after that run can end the authority. */
+      var run = 0, runBS = false;
+      while (run < after.length && (after.charAt(run) === '/' || after.charAt(run) === BS)) { if (after.charAt(run) === BS) runBS = true; run++; }
+      var rem = after.slice(run), endAt = -1, qf = -1;
+      for (var k = 0; k < rem.length; k++) {
+        var ch = rem.charAt(k);
+        if (endAt < 0 && (ch === '/' || ch === BS || ch === '?' || ch === '#')) endAt = k;
+        if (ch === '?' || ch === '#') { qf = k; break; }
+      }
+      var pathPart = qf >= 0 ? rem.slice(0, qf) : rem;
+      if (runBS) cites.push('#special-authority-ignore-slashes-state: right after "' + sch + ':", backslashes and slashes are skipped as if they were "//"');
+      if (endAt >= 0 && rem.charAt(endAt) === BS) cites.push('#authority-state: in a special URL a backslash ends the authority, exactly like "/"');
+      if (endAt >= 0 && pathPart.indexOf(BS, endAt + 1) >= 0) cites.push('#path-state: in a special URL a backslash inside the path ends the segment, exactly like "/"');
+    }
+    if (/[\t\n\r]/.test(input)) cites.push('#concept-basic-url-parser: ASCII tab and newline are removed from the input before parsing');
+    if (input.length && (input.charCodeAt(0) <= 32 || input.charCodeAt(input.length - 1) <= 32)) cites.push('#concept-basic-url-parser: leading and trailing C0 control or space are stripped');
+    if (a.nat.ok && special && WHATWG_SPECIAL[sch] && a.nat.port === '' && a.appB.port === WHATWG_SPECIAL[sch]) cites.push('#special-scheme: ' + sch + ' default port ' + WHATWG_SPECIAL[sch] + ' is elided (browser side)');
+    append(col, el('p', 'cite', 'Cites: ' + cites.join('. ')));
+    return col;
+  }
+
+  function rfcCol(a) {
+    var col = el('div', 'col');
+    append(col, el('h3', null, 'B. RFC 3986 strict'));
+    append(col, el('p', 'sub', 'Appendix A grammar; resolution 5.2; normalization 6.2'));
+    var d = a.diag;
+    if (d.verdict === 'invalid') {
+      append(col, el('p', 'verdict v-bad', 'invalid: not a URI-reference'));
+      var e = d.error;
+      var p = el('p', 'small');
+      append(p, 'First offending code point ', el('strong', null, e.cpText), ' at code point index ' + e.index + ', in ', el('strong', null, e.component), '.');
+      append(col, p);
+      append(col, el('p', 'small mono', 'Rule: ' + e.rule));
+      if (e.msg) append(col, el('p', 'small', e.msg + '.'));
+      append(col, el('p', 'cite', 'Cites: RFC 3986 Appendix A; regex verdict ' + a.regex + ', diagnostic verdict ' + d.verdict + '.'));
+      return col;
+    }
+    append(col, el('p', 'verdict v-ok', d.verdict === 'uri' ? 'valid: absolute URI' : 'valid: relative reference'));
+    var c = d.comps;
+    append(col, kv([['scheme', c.scheme], ['authority', c.authority], ['userinfo', c.userinfo], ['host', c.host], ['host type', c.hostType], ['port', c.port], ['path', c.path], ['query', c.query], ['fragment', c.fragment]]));
+    if (a.useBase) {
+      if (a.baseProblem) append(col, el('p', 'small v-bad', 'Not resolved: ' + a.baseProblem + '.'));
+      else if (a.resolved !== undefined) {
+        var rp = el('p', 'small');
+        append(rp, 'Resolved against the base with 5.2.2 (' + ($('strict').checked ? 'strict' : 'non-strict') + '): ');
+        var sp = el('span', 'mono'); sp.appendChild(marked(a.resolved)); rp.appendChild(sp);
+        append(col, rp);
+      }
+    } else if (d.verdict === 'relative') {
+      append(col, el('p', 'small', 'A relative reference needs a base URL before it identifies anything. Add one above to compare.'));
+    }
+    if (a.steps) {
+      var ul = el('ul', 'steps');
+      var prev = recompose(a.target);
+      a.steps.forEach(function (s) {
+        var li = el('li');
+        var now = recompose(s.c);
+        li.appendChild(el('span', 'lbl', s.label + (now === prev ? ' (no change)' : '')));
+        li.appendChild(marked(now));
+        ul.appendChild(li);
+        prev = now;
+      });
+      append(col, el('p', 'small', 'Raw target: '), null);
+      var raw = el('p', 'mono small'); raw.appendChild(marked(recompose(a.target))); append(col, raw);
+      append(col, ul);
+    }
+    if (a.http.applies) {
+      var hp = el('p', 'small');
+      append(hp, el('strong', null, 'http(s) scheme check (RFC 9110 sec 4.2): '));
+      append(hp, el('span', a.http.valid ? 'v-ok' : 'v-bad', a.http.valid ? 'valid ' + a.http.scheme + ' URI' : 'invalid ' + a.http.scheme + ' URI: ' + a.http.reason));
+      append(col, hp);
+      if (!a.http.valid) append(col, el('p', 'cite', a.http.reason === 'empty host' ? 'RFC 9110 4.2.1 and 4.2.2: a recipient that processes an http(s) URI reference with an empty host "MUST reject it as invalid".' : 'RFC 9110 4.2.1 and 4.2.2: http-URI = "http" "://" authority path-abempty [ "?" query ], https the same.'));
+    }
+    append(col, el('p', 'cite', 'Cites: RFC 3986 Appendix A (regex and diagnostic verdicts agree: ' + (a.regex === d.verdict ? 'yes' : 'NO') + '), 3.2.2 for host type, 6.2.2 and 6.2.3 for normalization.'));
+    return col;
+  }
+
+  function appBCol(a) {
+    var col = el('div', 'col');
+    append(col, el('h3', null, 'C. Appendix B split'));
+    append(col, el('p', 'sub', 'RFC 3986 4.1 calls this "an example of a non-validating URI-reference parser that will take any given string and extract the URI components". Appendix B gives the regex "for breaking-down a well-formed URI reference".'));
+    var b = a.appB;
+    append(col, kv([['scheme', b.scheme], ['authority', b.authority], ['userinfo', b.userinfo], ['host', b.host], ['port', b.port], ['path', b.path], ['query', b.query], ['fragment', b.fragment]]));
+    append(col, el('p', 'cite', 'Convention, not RFC: inside the authority, userinfo ends at the LAST "@" and the port follows the last ":". RFC 3986 defines no split for input that is not a URI.'));
+    return col;
+  }
+
+  function show(v) { return v === undefined ? '(undefined)' : (v === '' ? '(empty)' : v); }
+  function cmpTable(a) {
+    var wrap = el('div', 'cmpwrap');
+    var t = el('table');
+    var cap = el('caption', 'small', 'Component comparison, browser against RFC strict');
+    cap.style.textAlign = 'left'; cap.style.padding = '8px 12px';
+    t.appendChild(cap);
+    var th = el('thead'); var tr = el('tr');
+    ['Component', 'Browser', 'RFC strict', 'Result'].forEach(function (h) { var x = el('th', null, h); x.setAttribute('scope', 'col'); tr.appendChild(x); });
+    th.appendChild(tr); t.appendChild(th);
+    var tb = el('tbody');
+    ['scheme', 'userinfo', 'host', 'port', 'path'].forEach(function (k) {
+      var r = a.cmp[k];
+      var row = el('tr');
+      var c0 = el('th', null, k); c0.setAttribute('scope', 'row'); row.appendChild(c0);
+      var c1 = el('td', 'val'); c1.appendChild(r.nat === '' ? el('span', 'small', '(empty)') : marked(r.nat)); row.appendChild(c1);
+      var c2 = el('td', 'val');
+      if (k === 'host' && r.noAuthority) c2.appendChild(el('span', 'small', '(no authority)'));
+      else c2.appendChild(r.rfc === undefined ? el('span', 'small', '(undefined)') : (r.rfc === '' ? el('span', 'small', '(empty)') : marked(r.rfc)));
+      row.appendChild(c2);
+      var c3 = el('td');
+      c3.appendChild(badge(r.cls));
+      if (r.steps && r.steps.length) c3.appendChild(el('div', 'small', 'step ' + r.steps.join(', ') + (r.cite ? ' (' + r.cite + ')' : '')));
+      if (r.note) c3.appendChild(el('div', 'small', r.note));
+      row.appendChild(c3);
+      tb.appendChild(row);
+    });
+    t.appendChild(tb);
+    wrap.appendChild(t);
+    return wrap;
+  }
+
+  var NUMERIC_V4 = /^[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}$/;
+  function notesFor(a) {
+    var box = el('div', 'notes');
+    var any = false;
+    var tg = a.target;
+    if (a.nat.ok && tg && tg.hostType === 'reg-name' && NUMERIC_V4.test(a.nat.hostname) && tg.host.toLowerCase() !== a.nat.hostname) {
+      any = true;
+      append(box, el('p', null, 'Under RFC 3986 3.2.2 first-match-wins, "' + tg.host + '" is not an IPv4address, so it is a reg-name. The RFC side does not resolve it to an address. This browser reads it as ' + a.nat.hostname + '. RFC 3986 7.4:'));
+      append(box, el('blockquote', null, '"If this filtering is performed, literals should be converted to numeric form and filtered based on the numeric value, and not on a prefix or suffix of the string form."'));
+    }
+    if (a.http.applies && a.http.userinfo) {
+      any = true;
+      append(box, el('p', null, 'USERINFO PRESENT. RFC 9110 4.2.4: before using an http(s) reference from an untrusted source, a recipient "SHOULD parse for userinfo and treat its presence as an error".'));
+    }
+    if (a.hostSplit) {
+      any = true;
+      append(box, el('p', null, 'HOST SPLIT: the host this browser would connect to differs from the RFC strict host or the Appendix B host. An allowlist that reads one and a fetch that reads the other see different hosts.'));
+    }
+    if (a.diag.verdict === 'invalid' && a.nat.ok) {
+      any = true;
+      append(box, el('p', null, 'RFC REJECTS, BROWSER ACCEPTS: a strict RFC 3986 check refuses this string before any host is extracted.'));
+    }
+    return any ? box : null;
+  }
+
+  function renderRow(n, line, a) {
+    var card = el('article', 'card');
+    var head = el('div', 'head');
+    append(head, el('span', 'lineno', 'Line ' + n));
+    var iv = el('span', 'input-view'); iv.appendChild(marked(line)); head.appendChild(iv);
+    head.appendChild(badge(a.rollup));
+    if (a.hostSplit) head.appendChild(el('span', 'badge b-flag', 'HOST SPLIT'));
+    if (a.http.applies && a.http.userinfo) head.appendChild(el('span', 'badge b-flag', 'USERINFO PRESENT'));
+    if (a.http.applies) head.appendChild(el('span', 'badge ' + (a.http.valid ? 'b-agree' : 'b-dis'), a.http.valid ? 'VALID ' + a.http.scheme.toUpperCase() + ' URI' : 'INVALID ' + a.http.scheme.toUpperCase() + ' URI'));
+    card.appendChild(head);
+    var cols = el('div', 'cols');
+    cols.appendChild(nativeCol(a, line));
+    cols.appendChild(rfcCol(a));
+    cols.appendChild(appBCol(a));
+    card.appendChild(cols);
+    if (a.cmp) card.appendChild(cmpTable(a));
+    var nt = notesFor(a);
+    if (nt) card.appendChild(nt);
+    return card;
+  }
+
+  var MAX_LEN = 8192, MAX_LINES = 400;
+  function run() {
+    var out = $('results');
+    out.textContent = '';
+    var raw = $('urls').value;
+    var esc = $('esc').checked;
+    var strict = $('strict').checked;
+    var base = $('base').value;
+    if (esc) base = decodeEscapes(base);
+    var lines = raw.split(LF);
+    var counts = {}, shown = 0, skipped = 0, splits = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line === '') { continue; }
+      if (shown >= MAX_LINES) { skipped++; continue; }
+      shown++;
+      if (line.length > MAX_LEN) {
+        var c = el('article', 'card');
+        var h = el('div', 'head');
+        append(h, el('span', 'lineno', 'Line ' + (i + 1)), el('span', 'badge b-dis', 'REFUSED'), el('span', 'small', 'This line is ' + line.length + ' characters long; the limit is ' + MAX_LEN + '. It was not parsed.'));
+        c.appendChild(h); out.appendChild(c);
+        counts.REFUSED = (counts.REFUSED || 0) + 1;
+        continue;
+      }
+      var input = esc ? decodeEscapes(line) : line;
+      var a = analyze(input, base === '' ? undefined : base, strict);
+      counts[a.rollup] = (counts[a.rollup] || 0) + 1;
+      if (a.hostSplit) splits++;
+      out.appendChild(renderRow(i + 1, input, a));
+    }
+    var sm = $('summary');
+    sm.textContent = '';
+    if (!shown) { sm.appendChild(el('p', 'banner info', 'Paste one or more URLs, or load the example set.')); return; }
+    var p = el('p', 'banner info');
+    append(p, shown + ' line' + (shown === 1 ? '' : 's') + ' compared. ');
+    Object.keys(counts).forEach(function (k) { append(p, badge(k), ' ' + counts[k] + '  '); });
+    if (splits) append(p, el('span', 'badge b-flag', 'HOST SPLIT'), ' ' + splits);
+    if (skipped) append(p, ' ' + skipped + ' further lines were not shown (limit ' + MAX_LINES + ').');
+    sm.appendChild(p);
+  }
+
+  function loadExamples() {
+    var esc = $('esc').checked;
+    var ex = exampleSet().filter(function (e) { return e[0].indexOf(TAB) < 0; }).map(function (e) { return e[0]; });
+    if (esc) ex.push('http://go' + BS + 'tod.com/');
+    $('urls').value = ex.join(LF);
+    run();
+    if (!esc) {
+      var sm = $('summary');
+      sm.appendChild(el('p', 'small', 'Tick "Decode escapes" and load the set again to add the tab example (http://go<TAB>od.com/).'));
+    }
+  }
+
+  function renderSelfTest() {
+    var res = runSelfTest();
+    var box = $('selftest');
+    box.textContent = '';
+    var hardFail = res.filter(function (r) { return r.kind === 'HARD' && !r.ok; });
+    var list = el('div', 'tablewrap');
+    var t = el('table');
+    var th = el('thead'); var tr = el('tr');
+    ['Check', 'Kind', 'Status', 'What was checked'].forEach(function (h) { var x = el('th', null, h); x.setAttribute('scope', 'col'); tr.appendChild(x); });
+    th.appendChild(tr); t.appendChild(th);
+    var tb = el('tbody');
+    res.forEach(function (r) {
+      var row = el('tr');
+      var c0 = el('th', null, r.id); c0.setAttribute('scope', 'row'); row.appendChild(c0);
+      row.appendChild(el('td', null, r.kind === 'HARD' ? 'HARD' : 'INFORMATIONAL'));
+      row.appendChild(el('td', r.kind === 'INFO' ? 'st-info' : (r.ok ? 'st-pass' : 'st-fail'), r.kind === 'INFO' ? 'MEASURED' : (r.ok ? 'PASS' : 'FAIL')));
+      var td = el('td', null, r.title);
+      if (r.detail.length) {
+        var det = el('details');
+        det.appendChild(el('summary', null, r.detail.length + ' detail line' + (r.detail.length === 1 ? '' : 's')));
+        var ul = el('ul', 'small');
+        r.detail.forEach(function (d) { var li = el('li'); li.appendChild(marked(d)); ul.appendChild(li); });
+        det.appendChild(ul);
+        td.appendChild(det);
+      }
+      row.appendChild(td);
+      tb.appendChild(row);
+    });
+    t.appendChild(tb); list.appendChild(t);
+    box.appendChild(list);
+    var trust = $('trust');
+    trust.textContent = '';
+    if (hardFail.length) trust.appendChild(el('p', 'banner err', 'Self test FAILED (' + hardFail.map(function (r) { return r.id; }).join(', ') + '). The RFC side of this page is not behaving as specified, so its results cannot be trusted in this browser.'));
+    else trust.appendChild(el('p', 'banner ok', 'Self test passed: every HARD check holds in this browser.'));
+  }
+
+  function renderProbes() {
+    var tb = $('probes');
+    tb.textContent = '';
+    probeList().forEach(function (p) {
+      var got = runProbe(p);
+      var ok = got === p.expect;
+      var row = el('tr');
+      var c0 = el('th', null, p.id); c0.setAttribute('scope', 'row'); row.appendChild(c0);
+      row.appendChild(el('td', 'val', p.code));
+      row.appendChild(el('td', 'val', p.expect));
+      var c3 = el('td', 'val'); c3.appendChild(marked(got)); row.appendChild(c3);
+      row.appendChild(el('td', ok ? 'st-pass' : 'st-fail', ok ? 'PASS' : 'DEVIATION'));
+      row.appendChild(el('td', 'small', p.anchor));
+      tb.appendChild(row);
+    });
+  }
+
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('wrud-theme', t); } catch (e) { /* storage blocked */ }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    $('engine-line').textContent = 'Column A engine (navigator.userAgent): ' + (navigator.userAgent || 'unknown');
+    $('theme-toggle').addEventListener('click', function () {
+      setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+    $('run').addEventListener('click', run);
+    $('examples').addEventListener('click', loadExamples);
+    $('clear').addEventListener('click', function () { $('urls').value = ''; $('base').value = ''; run(); });
+    var timer = null;
+    function soon() { clearTimeout(timer); timer = setTimeout(run, 250); }
+    $('urls').addEventListener('input', soon);
+    $('base').addEventListener('input', soon);
+    $('strict').addEventListener('change', run);
+    $('esc').addEventListener('change', run);
+    renderSelfTest();
+    renderProbes();
+    loadExamples();
+  });
+})();
+</script>
+</body>
+</html>
