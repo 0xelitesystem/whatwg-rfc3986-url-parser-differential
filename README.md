@@ -120,7 +120,7 @@ There is no build. It is a single self-contained `index.html` with inline CSS an
 
 ## License
 
-MIT. Copyright (c) 2026 0xelitesystem.
+MIT. Copyright (c) 2026 RBL Industries LLC.
 
 ## Related
 
